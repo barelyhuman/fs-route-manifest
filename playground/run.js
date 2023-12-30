@@ -1,12 +1,10 @@
 import {
+  generateRoutes,
   readDirectory,
-  normalizeURLPaths,
-  writeManifest,
-} from "../src/index.js";
+  stringify
+} from "../src/index.ts";
 
 const filePaths = readDirectory("./routes");
-const urlManifest = normalizeURLPaths("/routes", filePaths);
+const urlManifest = generateRoutes("/routes", filePaths);
 
-console.log({ urlManifest });
-
-writeManifest(urlManifest, "./routes.js");
+console.log(stringify(urlManifest))

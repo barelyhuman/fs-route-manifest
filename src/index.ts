@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { extname, join, resolve } from "node:path";
+import path, { extname, join, resolve } from "node:path";
 import { pathToRegexp } from "path-to-regexp";
 
 export type FilePathInfo = {
@@ -9,16 +9,24 @@ export type FilePathInfo = {
   isDirectory: any;
 };
 
-export type URLPathInfo = {
-  file: FilePathInfo;
+export type URLPathInfo = FilePathInfo & {
   url: string;
   match?: string;
   matchFlags?: string;
 };
 
-export function readDirectory(basePath: string) {
-  return fs
-    .readdirSync(basePath)
+export type GenerateOptions = {
+  normalizer: typeof normalizeURLPaths;
+  transformer: typeof expressTransformer;
+};
+
+export const defaultFS = {
+  readDir: fs.readdirSync,
+};
+
+export function readDirectory(basePath: string, fsInterface = defaultFS) {
+  return fsInterface
+    .readDir(basePath)
     .map((file) => addFileInformation(basePath, file))
     .reduce((acc, item) => {
       if (item.isDirectory) {
@@ -38,6 +46,29 @@ function addFileInformation(basePath: string, file: string): FilePathInfo {
   };
 }
 
+export function generateRoutes(
+  basePath,
+  paths: FilePathInfo[],
+  options?: GenerateOptions
+) {
+  const { normalizer = normalizeURLPaths, transformer = expressTransformer } =
+    options || {};
+
+  const normalizedURLs = normalizer(basePath, paths);
+  const transformedURLS = normalizedURLs.map((x) => transformer(x));
+  return transformedURLS;
+}
+
+export function expressTransformer(
+  x: Pick<URLPathInfo, "url"> & Record<string, unknown>
+) {
+  const regx = pathToRegexp(x.url);
+  x.url = x.url.replace(/([\/]\${1,2}(\w+))/g, "/:$2");
+  x.match = regx;
+  x.matchFlags = regx.flags;
+  return x;
+}
+
 export function normalizeURLPaths(
   basePath: string,
   paths: FilePathInfo[] = []
@@ -53,18 +84,11 @@ export function normalizeURLPaths(
         .replace(/(\w+)\/$/, "$1");
 
       return {
+        ...x,
         url: url,
-        file: x,
       };
     })
-    .sort(sortUrls)
-    .map((x: Pick<URLPathInfo, "url" | "file"> & Record<string, unknown>) => {
-      const regx = pathToRegexp(x.url);
-      x.url = x.url.replace(/([\/]\${1,2}(\w+))/g, "/:$2");
-      x.match = regx;
-      x.matchFlags = regx.flags;
-      return x;
-    });
+    .sort(sortUrls);
 }
 
 // a variation of the following snippet
@@ -98,7 +122,7 @@ function sortUrls(x, y) {
   return 0;
 }
 
-export function writeManifest(manifest, dest) {
+export function stringify(manifest: URLPathInfo | URLPathInfo[]) {
   let stringified = JSON.stringify(
     manifest,
     (k, v) => {
@@ -110,11 +134,5 @@ export function writeManifest(manifest, dest) {
     2
   );
 
-  const extension = extname(dest).replace(/^\./, "");
-
-  if (["js", "ts"].includes(extension)) {
-    stringified = `export default ${stringified}`;
-  }
-
-  fs.writeFileSync(dest, stringified, "utf8");
+  return stringified;
 }
