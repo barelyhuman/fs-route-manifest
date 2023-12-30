@@ -1,6 +1,6 @@
 {
   "name": "@barelyhuman/fs-route-manifest",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Opinionated file system manifest generator",
   "types": "./dist/index.d.ts",
   "exports": {
