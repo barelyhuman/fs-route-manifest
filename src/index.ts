@@ -18,6 +18,7 @@ export type URLPathInfo = FilePathInfo & {
 export type GenerateOptions = {
   normalizer: typeof normalizeURLPaths;
   transformer: typeof expressTransformer;
+  sorter: typeof defaultURLSorter;
 };
 
 export const defaultFS = {
@@ -51,10 +52,13 @@ export function generateRoutes(
   paths: FilePathInfo[],
   options?: GenerateOptions
 ) {
-  const { normalizer = normalizeURLPaths, transformer = expressTransformer } =
-    options || {};
+  const {
+    normalizer = normalizeURLPaths,
+    transformer = expressTransformer,
+    sorter = defaultURLSorter,
+  } = options || {};
 
-  const normalizedURLs = normalizer(basePath, paths);
+  const normalizedURLs = normalizer(basePath, paths, sorter);
   const transformedURLS = normalizedURLs.map((x) => transformer(x));
   return transformedURLS;
 }
@@ -86,7 +90,8 @@ export function expressTransformer(
  */
 export function normalizeURLPaths(
   basePath: string,
-  paths: FilePathInfo[] = []
+  paths: FilePathInfo[] = [],
+  sorter = defaultURLSorter
 ): URLPathInfo[] {
   const normalizedBasePath = basePath.replace(/^\./, "").replace(/^\//, "");
   const pathRegex = new RegExp(`^[\/]?(${normalizedBasePath})`);
@@ -103,14 +108,14 @@ export function normalizeURLPaths(
         url: url,
       };
     })
-    .sort(sortUrls);
+    .sort(sorter);
 }
 
 // a variation of the following snippet
 // https://github.com/cyco130/smf/blob/c4b601f48cd3b3b71bea6d76b52b9a85800813e4/smf/shared.ts#L22
 // this doesn't consider partial routes segments
 // eg: /about/$foo-$bar isn't a valid route segment for this sorter
-function sortUrls(x, y) {
+export function defaultURLSorter(x: URLPathInfo, y: URLPathInfo) {
   const catchAll =
     Number(x.url.match(/\$\$(\w+)$/)) - Number(y.url.match(/\$\$(\w+)$/));
   if (catchAll) return catchAll;
