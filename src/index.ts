@@ -75,7 +75,9 @@ export function expressTransformer(
   x: Pick<URLPathInfo, "url"> & Record<string, unknown>
 ): URLPathInfo {
   const regx = pathToRegexp(x.url);
-  x.url = x.url.replace(/([\/]\${1,2}(\w+))/g, "/:$2");
+  x.url = x.url
+    .replace(/([\/]\${2}(\w+))/g, "/:$2*")
+    .replace(/([\/]\$(\w+))/g, "/:$2");
   x.match = regx;
   x.matchFlags = regx.flags;
   return x as URLPathInfo;
