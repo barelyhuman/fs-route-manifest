@@ -59,6 +59,14 @@ export function generateRoutes(
   return transformedURLS;
 }
 
+/**
+ * Default transformer used by generateRoutes in conjunction with the `normalizeURLPaths` normalizer
+ * to add matching regex to the final manifest.
+ * If you've changed the normalizer, make sure you also change the transformer or validate everything
+ * you wish for the transformer to handler
+ *
+ * The current transformer generates a similar regexp pattern to express.js
+ */
 export function expressTransformer(
   x: Pick<URLPathInfo, "url"> & Record<string, unknown>
 ) {
@@ -69,6 +77,13 @@ export function expressTransformer(
   return x;
 }
 
+/**
+ * Normalizer used by the generateRoutes function to find and clean up the file paths
+ * to valid url segments that can be parsed/compiled to create regex matchers for the final manifest
+ * This particular normalizer does the following
+ * - Clean File Paths and creates basic urls
+ * - Sorts the urls based on the required priority
+ */
 export function normalizeURLPaths(
   basePath: string,
   paths: FilePathInfo[] = []
@@ -122,17 +137,31 @@ function sortUrls(x, y) {
   return 0;
 }
 
-export function stringify(manifest: URLPathInfo | URLPathInfo[]) {
+/**
+ * Stringify a given manifest with an optional replacer functions
+ * the default replacer changes the `match` regex to a string representation of the regex
+ */
+export function stringify(
+  manifest: URLPathInfo | URLPathInfo[],
+  replacer = defaultReplacer
+) {
   let stringified = JSON.stringify(
     manifest,
-    (k, v) => {
-      if (v instanceof RegExp) {
-        return v.source;
-      }
-      return v;
-    },
+
+    replacer,
     2
   );
 
   return stringified;
+}
+
+/**
+ * Default replacer used by the `stringify` function to decide what string to be returned in the stringified manifest.
+ * As the stringification is on an object, the normal JSON.stringify rules still apply
+ */
+export function defaultReplacer(k: string, v: unknown) {
+  if (v instanceof RegExp) {
+    return v.source;
+  }
+  return v;
 }
