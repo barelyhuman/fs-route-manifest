@@ -14,7 +14,8 @@
     "build": "rollup -c",
     "next": "bumpp",
     "test": "echo 'true'",
-    "release": "publint && np"
+    "release": "publint && np",
+    "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {
     "access": "public"
